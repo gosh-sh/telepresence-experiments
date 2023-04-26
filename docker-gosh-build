@@ -1,0 +1,21 @@
+#!/bin/sh
+
+set -x
+
+
+rm -rf tmp
+mkdir tmp
+cd tmp
+echo "docker_file: repo/Dockerfile" > config.yaml
+GOSH_REPO="${@: -1}"
+set -- "${@:1:$(($#-1))}"
+echo "cloning GOSH repo: $GOSH_REPO"
+
+INI_LOCATION=dispatcher.ini 
+export PATH=$PATH:/Users/andreykurochkin/.gosh 
+git clone $GOSH_REPO repo
+
+
+/Users/andreykurochkin/Documents/Projects/work/gosh-build-tools/target/debug/gosh-builder-cli --config ../config.yaml
+
+docker $*
