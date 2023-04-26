@@ -12,7 +12,7 @@ set -- "${@:1:$(($#-1))}"
 echo "cloning GOSH repo: $GOSH_REPO"
 
 INI_LOCATION=dispatcher.ini 
-export PATH=$PATH:/Users/andreykurochkin/.gosh 
+# export PATH=$PATH:~/.gosh
 git clone $GOSH_REPO repo
 
 
