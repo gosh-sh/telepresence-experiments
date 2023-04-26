@@ -16,6 +16,6 @@ export PATH=$PATH:/Users/andreykurochkin/.gosh
 git clone $GOSH_REPO repo
 
 
-/Users/andreykurochkin/Documents/Projects/work/gosh-build-tools/target/debug/gosh-builder-cli --config ../config.yaml
+gosh-builder-cli --config ../config.yaml
 
 docker $*
