@@ -12,15 +12,15 @@ import (
 // BuildImage builds an image from source. Stdout is silenced during those operations. The
 // image ID is returned.
 func BuildImage(ctx context.Context, context string, buildArgs []string) (string, error) {
-	var dockerBuildArgs []string
 	var dockerBuildCmd string
+
 	if strings.HasPrefix(context, "gosh://") {
-		dockerBuildArgs = []string{}
-		dockerBuildCmd = "docker-gosh-build"
+		dockerBuildCmd = "gosh"
 	} else {
-		dockerBuildArgs = []string{"build", "--quiet"}
 		dockerBuildCmd = "docker"
 	}
+
+	dockerBuildArgs := []string{"build", "--quiet"}
 	args := append(dockerBuildArgs, buildArgs...)
 	cmd := proc.StdCommand(ctx, dockerBuildCmd, append(args, context)...)
 	var out bytes.Buffer
