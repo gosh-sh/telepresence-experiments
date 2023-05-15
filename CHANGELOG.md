@@ -1,5 +1,33 @@
 # Changelog
 
+### 2.13.2 (May 12, 2023)
+- Bugfix: Replaced `/` characters with a `-` when the authenticator service creates the kubeconfig in the Telepresence cache.
+
+- Feature: Configurable strategy (`auto`, `powershell`. or `registry`) to set the global DNS search path on Windows. Default
+  is `auto` which means try `powershell` first, and if it fails, fall back to `registry`.
+
+- Feature: The timeout for the traffic manager to wait for traffic agent to arrive can
+  now be configured in the `values.yaml` file using `timeouts.agentArrival`. The default
+  timeout is still 30 seconds.
+
+- Bugfix: The automatic discovery of a local container based cluster (minikube or kind) used when the
+  Telepresence daemon runs in a container, now works on macOS and Windows, and with different profiles,
+  ports, and cluster names
+
+- Bugfix: FTP Stability improvements. Multiple simultaneous intercepts can transfer large files in bidirectionally and in parallel.
+
+- Bugfix: Pods using persistent volumes no longer causes timeouts when intercepted.
+
+- Bugfix: Ensure that `telepresence connect` succeeds even though DNS isn't configured correctly.
+
+- Bugfix: The traffic-manager would sometimes panic with a "close of closed channel" message and exit.
+
+- Bugfix: The traffic-manager would sometimes panic and exit after some time due to a type cast panic.
+
+### 2.13.1 (April 20, 2023)
+
+- Change: Update ambassador-agent to version 1.13.13
+
 ### 2.13.0 (April 18, 2023)
 
 - Feature: The Docker network used by a Kind or Minikube (using the "docker" driver) installation, is automatically
@@ -10,7 +38,7 @@
 - Feature: There's a new --address flag to the intercept command allowing users to set the target IP of the intercept.
 
 - Feature: The new flags `--docker-build`, and `--docker-build-opt` was added to `telepresence intercept` to facilitate a
-  docker run directly from a docker context. 
+  docker run directly from a docker context.
 
 - Bugfix: Using `telepresence intercept --docker-run` now works with a container based daemon started with `telepresence connect --docker`
 
