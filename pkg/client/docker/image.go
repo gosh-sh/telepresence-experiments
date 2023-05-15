@@ -20,8 +20,7 @@ func BuildImage(ctx context.Context, context string, buildArgs []string) (string
 		dockerBuildCmd = "docker"
 	}
 
-	dockerBuildArgs := []string{"build", "--quiet"}
-	args := append(dockerBuildArgs, buildArgs...)
+	args := append([]string{"build", "--quiet"}, buildArgs...)
 	cmd := proc.StdCommand(ctx, dockerBuildCmd, append(args, context)...)
 	var out bytes.Buffer
 	cmd.Stdout = &out
