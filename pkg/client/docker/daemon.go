@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/tools/clientcmd/api"
 
-	"github.com/datawire/dlib/dexec"
 	"github.com/datawire/dlib/dlog"
 	"github.com/datawire/dlib/dtime"
 	"github.com/telepresenceio/telepresence/v2/pkg/authenticator/patcher"
@@ -56,14 +55,6 @@ const (
 func ClientImage(ctx context.Context) string {
 	registry := client.GetConfig(ctx).Images.Registry(ctx)
 	return registry + "/" + telepresenceImage + ":" + strings.TrimPrefix(version.Version, "v")
-}
-
-// EnsureNetwork checks if that a network with the given name exists, and creates it if that is not the case.
-func EnsureNetwork(ctx context.Context, name string) {
-	// Ensure that the telepresence bridge network exists
-	cmd := dexec.CommandContext(ctx, "docker", "network", "create", name)
-	cmd.DisableLogging = true
-	_ = cmd.Run()
 }
 
 // DaemonOptions returns the options necessary to pass to a docker run when starting a daemon container.
@@ -271,6 +262,10 @@ func ensureAuthenticatorService(ctx context.Context, kubeFlags map[string]string
 
 func enableK8SAuthenticator(ctx context.Context) error {
 	cr := daemon.GetRequest(ctx)
+	if kkf, ok := cr.KubeFlags["kubeconfig"]; ok && strings.HasPrefix(kkf, dockerTpCache) {
+		// Been there, done that
+		return nil
+	}
 	dlog.Debugf(ctx, "kubeflags = %v", cr.KubeFlags)
 	configFlags, err := client.ConfigFlags(cr.KubeFlags)
 	if err != nil {
@@ -377,11 +372,7 @@ func handleLocalK8s(ctx context.Context, clusterName string, cl *api.Cluster) er
 
 	// Let's check if we have a container with port bindings for the
 	// given addrPort that is a known k8sapi provider
-	cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv, dockerClient.WithAPIVersionNegotiation())
-	if err != nil {
-		return err
-	}
-	defer cli.Close()
+	cli := GetClient(ctx)
 	cjs := runningContainers(ctx, cli)
 
 	var hostPort, network string
@@ -415,7 +406,9 @@ func LaunchDaemon(ctx context.Context, name string) (conn *grpc.ClientConn, err 
 		return nil, err
 	}
 
-	EnsureNetwork(ctx, "telepresence")
+	if err = EnsureNetwork(ctx, "telepresence"); err != nil {
+		return nil, err
+	}
 	opts, addr, err := DaemonOptions(ctx, name)
 	if err != nil {
 		return nil, errcat.NoDaemonLogs.New(err)

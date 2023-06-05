@@ -27,6 +27,10 @@ spec:
       securityContext:
         {{- toYaml .Values.hooks.podSecurityContext | nindent 8 }}
       restartPolicy: Never
+      {{- with .Values.hooks.curl.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: uninstall-agents
           securityContext:
@@ -49,7 +53,7 @@ spec:
             - sh
             - -c
           args:
-            - 'curl --fail --connect-timeout 5 --max-time 60 --request DELETE https://{{ .Values.agentInjector.name }}.{{ include "traffic-manager.namespace" . }}/uninstall || exit 0'
+            - 'curl --fail --connect-timeout 5 --max-time 60 --request DELETE https://{{ .Values.agentInjector.name }}.{{ include "traffic-manager.namespace" . }}:{{ .Values.agentInjector.webhook.port }}/uninstall || exit 0'
       volumes:
         - name: secret-volume
           secret:

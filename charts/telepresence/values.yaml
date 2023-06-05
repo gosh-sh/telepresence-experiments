@@ -170,6 +170,8 @@ managerRbac:
 
 intercept:
   disableGlobal: false
+  environment:
+    excluded: []
 
 timeouts:
   # The duration the traffic manager should wait for an agent to arrive (i.e., to be registered in the traffic manager's state)
@@ -192,7 +194,7 @@ agentInjector:
     servicePath: /traffic-agent
     port: 443
     failurePolicy: Ignore
-    reinvocationPolicy: Never
+    reinvocationPolicy: IfNeeded
     sideEffects: None
     timeoutSeconds: 5
   agentImage: {}
@@ -320,11 +322,13 @@ hooks:
     registry: docker.io
     image: busybox
     tag: latest
+    imagePullSecrets: []
 
   curl:
     registry: docker.io
     image: "curlimages/curl"
     tag: latest
+    imagePullSecrets: []
 
 client:
   # Max time that the traffic-manager will keep a client connection alive when it doesn't receive

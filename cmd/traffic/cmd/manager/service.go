@@ -9,6 +9,7 @@ import (
 	"path"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -19,6 +20,9 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	empty "google.golang.org/protobuf/types/known/emptypb"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 
 	"github.com/datawire/dlib/dlog"
 	rpc "github.com/telepresenceio/telepresence/rpc/v2/manager"
@@ -805,6 +809,8 @@ func (m *service) ReviewIntercept(ctx context.Context, rIReq *rpc.ReviewIntercep
 		return nil, status.Errorf(codes.NotFound, "Agent session %q not found", sessionID)
 	}
 
+	rIReq.Environment = m.removeExlcudedEnvVars(ctx, rIReq.Environment)
+
 	intercept := m.state.UpdateIntercept(ceptID, func(intercept *rpc.InterceptInfo) {
 		// Sanity check: The reviewing agent must be an agent for the intercept.
 		if intercept.Spec.Namespace != agent.Namespace || intercept.Spec.Agent != agent.Name {
@@ -834,6 +840,33 @@ func (m *service) ReviewIntercept(ctx context.Context, rIReq *rpc.ReviewIntercep
 	return &empty.Empty{}, nil
 }
 
+func (m *service) removeExlcudedEnvVars(ctx context.Context, envVars map[string]string) map[string]string {
+	k8sConfig, err := rest.InClusterConfig()
+	if err != nil {
+		dlog.Errorf(ctx, "Unable to create in cluster config: %v", err)
+		return envVars
+	}
+
+	clientset, err := kubernetes.NewForConfig(k8sConfig)
+	if err != nil {
+		dlog.Errorf(ctx, "unable to create kubernetes clientset: %v", err)
+		return envVars
+	}
+
+	cm, err := clientset.CoreV1().ConfigMaps(managerutil.GetEnv(ctx).ManagerNamespace).Get(ctx, "telepresence-intercept-env", v1.GetOptions{})
+	if err != nil {
+		dlog.Errorf(ctx, "cannot read excluded variables configmap: %v", err)
+		return envVars
+	}
+
+	keys := strings.Split(cm.Data["excluded"], "\n")
+	for _, key := range keys {
+		delete(envVars, key)
+	}
+
+	return envVars
+}
+
 func (m *service) Tunnel(server rpc.Manager_TunnelServer) error {
 	ctx := server.Context()
 	stream, err := tunnel.NewServerStream(ctx, server)
@@ -849,6 +882,10 @@ func (m *service) WatchDial(session *rpc.SessionInfo, stream rpc.Manager_WatchDi
 	lrCh := m.state.WatchDial(session.SessionId)
 	for {
 		select {
+		// connection broken
+		case <-ctx.Done():
+			return nil
+		// service stopped
 		case <-m.ctx.Done():
 			return nil
 		case lr := <-lrCh:
@@ -856,15 +893,9 @@ func (m *service) WatchDial(session *rpc.SessionInfo, stream rpc.Manager_WatchDi
 				return nil
 			}
 			if err := stream.Send(lr); err != nil {
-				dlog.Errorf(ctx, "WatchDial.Send() failed: %v", err)
+				dlog.Errorf(ctx, "failed to send dial request: %v", err)
 				// We couldnt stream the dial request. This likely means
-				// that we lost connection. Pass lr to the next WatchDial call
-				select {
-				// If it has been longer than 30s, everyone has probably moved
-				// on with their lives.
-				case <-time.After(time.Second * 30):
-				case lrCh <- lr:
-				}
+				// that we lost connection.
 				return nil
 			}
 		}

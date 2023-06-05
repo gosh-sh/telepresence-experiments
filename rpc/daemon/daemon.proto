@@ -32,6 +32,12 @@ service Daemon {
   // SetDnsSearchPath sets a new search path.
   rpc SetDnsSearchPath(Paths) returns (google.protobuf.Empty);
 
+  // SetDNSExcludes sets the excludes field of DNSConfig.
+  rpc SetDNSExcludes(SetDNSExcludesRequest) returns (google.protobuf.Empty);
+
+  // SetDNSMappings sets the Mappings field of DNSConfig.
+  rpc SetDNSMappings(SetDNSMappingsRequest) returns (google.protobuf.Empty);
+
   // SetLogLevel will temporarily set the log-level for the daemon for a duration that is determined b the request.
   rpc SetLogLevel(manager.LogLevelRequest) returns (google.protobuf.Empty);
 
@@ -51,6 +57,11 @@ message Paths {
   repeated string namespaces = 2;
 }
 
+message DNSMapping {
+  string name = 1;
+  string alias_for = 2;
+}
+
 // DNS configuration for the local DNS resolver
 message DNSConfig {
   // local_ip is the address of the local DNS server. Only used by Linux systems that have no
@@ -65,6 +76,13 @@ message DNSConfig {
 
   // Suffixes to include. Has higher prio than the excludes
   repeated string include_suffixes = 4;
+
+  // Exclude are a list of hostname that the DNS resolver will not resolve even if they exist.
+  repeated string excludes = 8;
+
+  // DNSMapping contains a hostname and its associated alias. When requesting the name, the intended behavior is
+  // to resolve the alias instead.
+  repeated DNSMapping mappings = 9;
 
   // The maximum time wait for a cluster side host lookup.
   google.protobuf.Duration lookup_timeout = 6;
@@ -109,4 +127,12 @@ message OutboundInfo {
 message NetworkConfig {
   repeated manager.IPNet subnets = 1;
   OutboundInfo outbound_info = 2;
+}
+
+message SetDNSExcludesRequest {
+  repeated string excludes = 1;
+}
+
+message SetDNSMappingsRequest {
+  repeated DNSMapping mappings = 1;
 }
